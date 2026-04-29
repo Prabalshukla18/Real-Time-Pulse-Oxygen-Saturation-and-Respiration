@@ -1,0 +1,813 @@
+\documentclass{ieeeaccess}
+
+\usepackage{cite}
+\usepackage{etoolbox}
+\makeatletter
+\def\@doi{}
+\makeatother
+
+% --- Math ---
+\usepackage{amsmath,amssymb,amsfonts}
+
+% --- Algorithms ---
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{float}
+
+% --- Layout ---
+\usepackage{multicol}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{url}
+
+% --- Hyperlinks ---
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    citecolor=blue,
+    urlcolor=blue
+}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+\title{AI-Powered Health Monitoring System: Comprehensive Real-Time Assessment of Vital Signs Using PPG Signals}
+
+\author{
+Manan Joshi\authorrefmark{1},
+Prabal Kumar Shukla\authorrefmark{2},
+Yogesh R. Sindagi\authorrefmark{3},
+Nitya N. Kulkarni\authorrefmark{4},
+Mohana\authorrefmark{5},
+B. G. Sudarshan\authorrefmark{6}
+}
+
+\address[1]{Department of Computer Science and Engineering, R.V. College of Engineering, Bangalore, India}
+\address[2]{Department of Computer Science and Engineering, R.V. College of Engineering, Bangalore, India}
+\address[3]{Department of Computer Science and Engineering, R.V. College of Engineering, Bangalore, India}
+\address[4]{Department of Computer Science and Engineering, R.V. College of Engineering, Bangalore, India}
+\address[5]{Department of Computer Science and Engineering, R.V. College of Engineering, Bangalore, India}
+\address[6]{Department of Electronics and Instrumentation Engineering, R.V. College of Engineering, Bangalore, India}
+
+\corresp{Corresponding author: Mohana (e-mail: mohana@rvce.edu.in)}
+
+\begin{abstract}
+\textbf Continuous health surveillance is a core component of early detection of acute medical events. However, the existing modalities of monitoring remain too expensive and inconvenient to be used in the domestic setting in the long term. The paper describes a smart and inexpensive health monitoring system to measure oxygen saturation, heart rate and respiratory rate in real-time directly off photoplethysmography (PPG) signal without the use of additional respiratory sensors. The system consists of a MAX30102 PPG sensor which is in turn connected to an ESP32 microcontroller to do the signal acquisition. Signal processing methods are used to extract oxygen saturation and heart rate, and respiratory rate is estimated by amplitude and frequency modulations occurring on the PPG waveform. These parameters are then fed to a multilayer perceptron (MLP) classifier that is employed to absorb the calculated physiological indices to a stratifying health risks into three distinct groups: Healthy, Mild Risk, and Severe Risk. The validation experiments on a sample of 100 volunteers obtained 95\% measurement accuracies of both the SpO$_2$ and the heart rate with mean absolute errors of $\pm$0.25\% and $\pm$1.2 BPM, respectively. The PPG derived respiratory rate showed a good correlation with recorded manual respiration at the same time ($r = 0.92$). A risk classification model had an accuracy of 91.2\%. It has real-time and continuous monitoring, automated report creation, and visualization through a web applications. This work can offer scalable, cost effective solution that will be used to detect disease early and provide health care in resource limited environments by enabling simultaneous respiratory and oxygen saturation as well as heart rate monitoring with the use of only a single PPG sensor.
+
+\end{abstract}
+
+
+\begin{keywords}
+Photoplethysmography, wearable health monitoring, machine learning, vital signs, oxygen saturation, respiratory rate, remote healthcare, signal processing
+\end{keywords}
+
+\titlepgskip=-15pt
+
+\maketitle
+
+\section{Introduction}
+\label{sec:introduction}
+
+The healthcare industry is facing a series of unprecedented challenges, caused by the increased prevalence of chronic diseases and aging populations. According to the World Health Organization (WHO), cardiovascular diseases account for about 17.9 million deaths per year corresponding to 31\% of all global deaths, whereas there are another 4.1 million deaths per year from chronic respiratory diseases \cite{b1}. According to the American Heart Association, if cardiovascular diseases are detected early and continuously monitored and vital signs are monitored, the mortality rate may be reduced by up to 30\% \cite{b2}. Furthermore, the importance of remote health monitoring has been emphasized by the current pandemic of the patient population due to the respiratory complications leading to hospitalisation and deaths \cite{b3}. These statistics show the urgent need for accessible, continuous health monitoring systems that can measure key physiological parameters such as oxygen saturation (SpO$_2$), heart rate and respiratory rate for early health deterioration detection and preventive healthcare management.
+
+The increasing demand for portable and wearable health monitoring devices has been attributed to various factors such as the demand for telemedicine solutions, home healthcare management, and continuous patient monitoring in non-clinical environments. The global wearable medical device market size is expected to be worth \$185.6 billion in 2030 with a compound annual growth rate of 26.8\% \cite{b4}. Traditional hospital-based monitoring systems, although accurate, are expensive, take up a lot of space, and are impractical for long-term continuous monitoring in the non-clinical environment. Portable health monitoring devices have large benefits such as cost effectiveness, convenience for users, data collection which is acquired in real-time, and ability to deliver a continuous surveillance of the physiological condition of patients in their natural environments \cite{b5}. These devices help in the early warning systems for health anomalies, chronic disease management, and remote patient monitoring, which helps reduce the cost of healthcare and improves patient outcomes.
+
+Various biosignals can be used for physiological parameter estimation in portable health monitoring devices which have their own advantages and limitations. Electrocardiography (ECG) gives detailed information about cardiac electrical activity but requires multiple electrodes and is prone to motion artifacts \cite{b6}. Respiratory airflow sensors provide direct measurement of breathing but are intrusive and uncomfortable for continuous measurement \cite{b7}. Inertial measurement units (IMUs) are able to sense respiratory movements, however they are prone to body movement and body positioning \cite{b8}. Among these modalities, photoplethysmography (PPG) has shown a great potential as a biosignal because of its non-invasive application, low power consumption, small sensor design, and its suitability for wearable applications \cite{b9}. PPG is an optical sensing method that detects volumetric changes in blood circulation by detecting light absorption changes in the peripheral tissues making it suitable for continuous monitoring applications \cite{b10}.
+
+Recent researches have shown great developments of PPG-based health monitoring systems by machine learning and signal processing methods. Studies have shown that PPG signals could be used to estimate not only the radiometric parameters like SpO$_2$ and heart rate but also respiratory rate with the analysis of the signal modulations \cite{b11,b12}. A variety of machine learning methods such as deep neural network and ensemble methods have been successfully used to enhance the accuracy of measurement and the robustness of the measurement against motion artifact \cite{b13,b14}. IoT enabled PPG systems have been developed for remote monitoring purposes with a demonstration of the ability to transmit data in real-time and analyze data through cloud computing \cite{b15,b16}. Advanced signal processing methods such as wavelet transforms, empirical mode decomposition and adaptive filtering have been used to improve the signal quality and the parameter extraction accuracy \cite{b17,b18}. Furthermore, multi-sensor fusions of PPG with other modalities have been proven to be more reliable and to provide more monitoring options \cite{b19,b20}.
+
+Despite all these major improvements, there are still some research gaps in existing PPG-based health monitoring systems. Most available investigations are conducted with small parameter sets usually only SpO$_2$ and heart rate are measured and respiratory rate is not estimated \cite{b21}. Many suggested systems have not gone through adequate real-time validation using large numbers of participants limiting their clinical utility \cite{b22}. Current solutions are often complicated deployment of hardware that can increase cost and reduce portability and thus are not ideal for widespread deployment \cite{b23}. In addition, there are few systems that incorporate the intelligent health risk assessment functionality that can give meaningful health insights to end users \cite{b24}. Reliability and accuracy of the estimation of respiratory rate through PPG signals is still difficult, especially when the signal is contaminated with movement artifacts and physiological differences among individuals \cite{b25}. Therefore, the main goal of this research is to design a comprehensive, portable, and intelligent health monitoring system that can overcome these limitations by providing accurate real-time measurement of SpO$_2$, heart rate, and respiratory rate by using a single PPG sensor, and addressing machine learning-based health risk assessment to provide actionable health knowledge for users and healthcare providers.
+\section{Literature Survey}
+\label{sec:literature_survey}
+
+\subsection{Health Monitoring Systems that use Photoplethysmography}
+
+The health monitoring systems based on photoplethysmography can be broadly classified into two types, wearable and non-contact. While wearable PPG systems which use specialized sensors offer high accuracy, due to special requirements of user comfort and long-term compliance of monitoring, they frequently come with restrictions in the field of monitoring compliance \cite{b9}. Non-contact approaches, although more convenient, often face problems of motion artifacts and environmental interference \cite{b10}. Recent progress in signal processing and machine learning has led to a lot more accurate and robust measurement accuracy. Pittara et al. \cite{b2} developed an ensemble empirical mode decomposition framework that was able to provide improved pulse rate estimation from ambulatory PPG signals. However, this approach mainly centered on the heart rate measurement and on the other hand it did not cover comprehensive multi-parameter monitoring often demanded in medical applications \cite{b12}.
+
+The framework of the MAX30102 sensor has made it possible to achieve PPG signal acquisition in a compact and cost-effective way, which has opened up the accessibility of portable health monitoring applications. However, existing solutions still have problems with respiratory rate estimation and integrated health risk assessment. The proposed system in this work fills this void by combining complete physiological parameter extraction such as SpO$_2$, heart rate and respiratory rate from a single PPG sensor and machine learning based health risk classification. Unlike static measuring systems, it allows real-time monitoring with intelligent health assessment, and thus is adaptive to various healthcare monitoring contexts.
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.45\textwidth]{ppgacqu.png}
+\caption{Illustration of photoplethysmography (PPG) principle showing light emission, tissue interaction, and reflected signal detection from the finger.\cite{b37}}
+\label{fig:hardware_setup}
+\end{figure}
+\subsection{Multi-Parameter Physiological Monitoring Systems}
+
+Multi-parameter physiological monitoring has shown great improvements in healthcare outcomes over single-parameter approaches. Multi-modal vital sign monitoring improves diagnostic accuracy significantly \cite{b17}. However, most of the existing multi-parameter frameworks do not have effective integration mechanisms to offer comprehensive health assessment from the measured parameters \cite{b18}. Traditional pulse oximeters are limited to measuring only SpO$_2$ and heart rate, without measuring respiratory rate, even though it is clinically important as an early sign of changes in health status.
+
+The proposed framework is an innovative approach to derive three important physiological parameters from a single PPG sensor. Unlike traditional systems that need multiple sensors for monitoring multiple parameters, this approach focuses on signal processing techniques to obtain respiratory rate from PPG signal modulations while preserving the accuracy of traditional parameters. The integration of machine learning-based health risk assessment offers smart interpretation of the measured parameters and makes it possible to proactively manage people's health instead of merely reporting the parameters.
+
+\subsection{Machine Learning in Healthcare Monitoring}
+
+Applications of machine learning in healthcare monitoring have advanced from simple pattern recognition to sophisticated predictive analytics, marking a significant evolution. Many of the methods currently in use rely on single-parameter analysis or call for intricate multi-sensor systems, despite their potential for automated health assessment \cite{b13}. Deep learning models have revolutionized the analysis of physiological signals and these are understudied in the context of integrated health risk assessment in portable monitoring devices \cite{b14}. A variety of machine learning approaches have been investigated to analyze physiological signals and perform health monitoring tasks. Traditional machine learning models like Support Vector Machines (SVMs), k-Nearest Neighbors (k-NNs), Decision Trees, and Random Forests are widely applied for physiological signal analysis problems .
+
+Integration of real-time machine learning inference and portable PPG sensors offers the real-time health monitoring capabilities with intelligent assessment capabilities \cite{b15}. Furthermore, combining the signal processing and machine learning enables the adaptive parameter extraction, which can take the individual physiological variations into consideration, while preserving the accuracy of the measurement \cite{b16}. The proposed system combines signal processing with machine learning, using an MLP classifier to analyze a variety of physiological parameters and provide overall health risk assessment. This allows establishing the early detection of impending health problems and contributes to preventive healthcare applications.
+
+
+\section{Methodology}
+\label{sec:methodology}
+\subsection{System Architecture and Hardware Implementation}
+
+The suggested system is real-time physiological monitoring with full pipeline architecture, which includes hardware integration, signal processing, machine learning analysis, and the user interface.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.4\textwidth]{archi.jpeg}
+\caption{System architecture of the PPG acquisition system using the MAX30102, ESP32-based signal processing, backend data analysis, and web-based visualization of physiological parameters.}
+\label{fig:system_architecture}
+\end{figure}
+
+The overall system architecture is shown in Figure \ref{fig:system_architecture}, which shows all the data flow between the PPG signal acquisition and the display of real time parameters. The architecture also illustrates how hardware (MAX30102 sensor and ESP32 microcontroller) and software processing modules have been integrated to have a complete physiological monitoring.
+
+\subsubsection{Data Acquisition and Transmission}
+
+The ESP32 firmware handles real-time PPG data collection and continuously monitors red and infrared signals in the MAX30102 sensor. The raw digital values are buffered in local area and sent to the processing environment through the UART serial communication and a baud rate of 115200.
+
+The system helps in real-time streaming mode and batch data transfer mode. The real-time mode offers a constant data stream with low latency when used in an application of live monitoring, and the batch mode allows offline analysis and less communication overhead in battery-powered applications.
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.45\textwidth]{ckt.png}
+\caption{Circuit Diagram of the proposed system having  MAX30102 sensor, ESP32 microcontroller.}
+\label{fig:hardware_setup}
+\end{figure}
+
+\subsubsection{Signal Processing and Feature Extraction Pipeline}
+
+The signal processing pipeline starts with the acquisition of raw PPG data of the MAX30102 sensor at a frequency of 100 Hz. Preprocessing is performed with the help of bandpass filtering with 4th-order Butterworth filter with cutoff frequencies of 0.5-5 Hz to exclude baseline drift and high frequency noise and retain cardiac and respiratory data \cite{b23}.
+
+The estimation of heart rate makes use of adaptative peak detection algorithms, which detect systolic peaks in the filtered PPG signal. Dynamic thresholding provided by the algorithm corresponds to signal statistics to adapt inter-individual variations and variations in signal quality changes \cite{b24}. Interbeat intervals are obtained by difference of two successive peaks and heart rate obtained by moving average smoothing to remove variations.
+
+To estimate the SpO$_2$, red and infrared channels are filtered digitally and analyzed statistically to extract the AC and DC components. The ratio of the ratios is calculated and transformed into the percentage of SpO$_2$ by using the linear equation that has been calibrated \cite{b25}.
+
+The extraction of the respiratory rate is an extra processing of the infrared PPG signal. Low-pass filtering is followed by the calculation of the signal envelope by the Hilbert transform and identification of respiratory cycles by searching peaks in the signal envelope.
+
+\subsection{Photoplethysmography (PPG) Principles and Signal Processing}
+
+Photoplethysmography refers to a non-invasive optical sensing, which can monitor volumetric alteration in the blood flow in the peripheral tissues \cite{b9}. The basic idea is based on the fact that oxygenated and deoxygenated hemoglobin have different light absorption properties at certain wavelengths \cite{b10}. The penetration of light in an LED source in the skin is received by the skin tissue elements such as blood vessels, which is a component of hemoglobin that absorbs light depending on its oxygen level. The other light is captured by a photodetector to produce the PPG signal as either transmitted or reflected light \cite{b11}.
+
+The sensor MAX30102 has two sources of LEDs, red with a wavelength of about 660 nm and infrared with a wavelength of about 940 nm \cite{b12}. The particular wavelengths were selected due to the higher absorption coefficient of oxygenated blood to deoxygenated blood at these frequencies, making the distinction between them easy and the calculation of SpO$_2$ possible after that differentiation was made concurrently at these wavelengths \cite{b13}.
+
+The PPG signal can be further sub-divided into two main parts namely the AC (alternating current) component which is the variation of blood volume as a result of cardiac contractions, and the DC (direct current) component which is the absorption of the baselines caused by the presence of stationary tissues, venous blood and bones \cite{b14}. Proper separation and analysis of these components are the key elements in the extraction of physiological parameters.
+
+\subsubsection{Advanced Signal Processing Techniques}
+
+The signal processing chain uses a number of algorithms to make the measurements more accurate and resilient \cite{b5}. Adaptive filtering algorithms change filter parameters automatically when the signal characteristics and noise level vary \cite{b14}. It uses motion artifact detection and mitigation algorithms to detect and remove signal distortions caused by motion using accelerator data fusion and spectral analysis \cite{b34}.
+
+Algorithms such as temporal smoothing use moving averages filters with dynamic window size in order to reduce variation in measurements whilst preserving fast physiological variations \cite{b11}. Weighting schemes based on quality are weighting schemes that allocate confidence scores to individual measurements depending on a signal quality measure that allow strong parameter estimates to be obtained in adverse environments \cite{b12}.
+
+\subsection{Mathematical Formulation for Oxygen Saturation}
+
+The Ratio of Ratios (R) technique is used to determine oxygen saturation (SpO$_2$) by taking advantage of the relative absorption properties between red and infrared light by hemoglobin on the basis of its operation principle \cite{b15}. Mathematically, it is expressed in a ratio:
+
+
+\begin{equation}
+R = \frac{(AC_{red}/DC_{red})}{(AC_{IR}/DC_{IR})}
+\end{equation}
+
+where $AC_{red}$ and $AC_{IR}$ represent the pulsatile components, while $DC_{red}$ and $DC_{IR}$ represent the baseline components of red and infrared signals, respectively.
+
+The SpO$_2$ value is then determined using the empirically derived linear relationship:
+
+\begin{equation}
+SpO_2 = A - B \cdot R
+\end{equation}
+
+where $A$ and $B$ are calibration constants determined through experimental validation. Based on physiological constraints and calibration with reference devices, the constants were set within the ranges: $A = 104 \pm 2$ and $B = 17 \pm 1$, ensuring clinically acceptable accuracy \cite{b16}.
+
+\subsection{Heart Rate and Pulse Rate Mathematical Formulation}
+Heart rate estimation employs adaptive peak detection algorithms that identify systolic peaks in the filtered PPG signal. The algorithm uses dynamic thresholding based on signal statistics to accommodate inter-individual variations and signal quality changes.
+
+\subsubsection{Peak Detection Algorithm}
+For a filtered PPG signal x(n), peaks are detected using:
+\begin{equation}
+Peak(i) = \{x(i) | x(i) > x(i-1) \wedge x(i) > x(i+1) \wedge x(i) > \theta\}
+\end{equation}
+
+where the adaptive threshold θ is computed as:
+\begin{equation}
+\theta = \mu_{signal} + k \times \sigma_{signal}
+\end{equation}
+
+with $\mu_{signal}$ and $\sigma_{signal}$ being the mean and standard deviation of the signal, and k = 0.6 is the threshold coefficient.
+
+\subsubsection{Inter-Beat Interval Calculation}
+The time intervals between consecutive peaks are calculated as:
+\begin{equation}
+IBI_i = \frac{n_{i+1} - n_i}{f_s}
+\end{equation}
+
+where $n_i$ represents the sample index of the i-th peak and $f_s$ = 100 Hz is the sampling frequency.
+
+\subsubsection{Heart Rate Computation}
+The instantaneous heart rate is calculated from each Interbeat Interval:
+\begin{equation}
+HR_{inst}(i) = \frac{60}{IBI_i} \text{ [beats/min]}
+\end{equation}
+
+The final heart rate estimate uses temporal averaging to reduce variability:
+\begin{equation}
+HR = \frac{1}{N} \sum_{i=1}^{N} HR_{inst}(i)
+\end{equation}
+
+where N is the number of valid IBIs in the analysis window.
+
+\subsection{Respiratory Rate Mathematical Formulation}
+Respiratory activity induces characteristic low-frequency modulations in PPG waveforms through several physiological mechanisms \cite{b17}.
+
+\subsubsection{Envelope Extraction and Processing}
+The respiratory modulation envelope is obtained using the Hilbert transform:
+\begin{equation}
+\begin{aligned}
+E(n) &= \left| x_{\text{resp}}(n) 
++ j\,\mathcal{H}\{x_{\text{resp}}(n)\} \right|
+\end{aligned}
+\end{equation}
+where $x_{\text{resp}}(n)$ is the low-pass filtered PPG signal and $\mathcal{H}\{\cdot\}$ denotes the Hilbert transform.
+
+\subsubsection{Breath-to-Breath Interval Calculation}
+Similar to heart rate estimation, respiratory cycles are identified through peak detection in $E(n)$. The breath-to-breath interval is computed as:
+\begin{equation}
+\text{Breath\_Interval}_i =
+\frac{n_{\text{breath},i+1} - n_{\text{breath},i}}{f_s}
+\end{equation}
+where $n_{\text{breath},i}$ denotes the sample index of the $i$-th respiratory peak and $f_s$ is the sampling frequency.
+
+\subsubsection{Respiratory Rate Estimation}
+The respiratory rate is estimated as:
+\begin{equation}
+\begin{aligned}
+RR &= \frac{60}{T_{\text{breath\_mean}}} \;\; [\text{breaths/min}] \\
+T_{\text{breath\_mean}} &= \frac{1}{M} \sum_{i=1}^{M} \text{Breath\_Interval}_i
+\end{aligned}
+\end{equation}
+where $M$ represents the number of valid breath intervals.
+
+\subsubsection{Physiological Validation}
+Physiological constraints are applied to validate respiratory intervals:
+\begin{equation}
+\text{Valid\_Breath\_Interval}
+=
+\left\{ BI_i \mid 1.2 \leq BI_i \leq 10.0~\text{s} \right\}
+\end{equation}
+
+
+corresponding to respiratory rates between 10-20 breaths/min.
+The respiratory rate estimation process involves extracting these low-frequency components using digital signal processing techniques. A low-pass Butterworth filter with a cutoff frequency of 0.5 Hz isolates respiratory-related modulations from the infrared PPG signal \cite{b20}. Envelope detection using the Hilbert transform captures the amplitude variations, and peak detection algorithms identify individual breathing cycles.
+
+\subsection{Algorithms}
+This section presents the algorithms used for heart rate, oxygen saturation (SpO$_2$),
+and respiratory rate estimation from PPG signals.
+\begin{algorithm}[!t]
+\caption{Heart Rate Calculation from PPG Signal}
+\label{alg:heart_rate}
+\footnotesize
+\begin{algorithmic}[1]
+\Require IR buffer, sampling rate $f_s = 50$ Hz
+\Ensure Heart rate in BPM (60--100) or NULL
+
+\Statex \textbf{Data Validation}
+\State $N_{\text{req}} \gets 50 \times 30$
+\If{$|\text{buffer}| < N_{\text{req}}$}
+    \State \Return NULL
+\EndIf
+
+\Statex \textbf{Signal Preprocessing}
+\State $signal \gets \text{buffer}[0{:}1500]$
+\State $signal \gets signal - \text{mean}(signal)$
+
+\Statex \textbf{Bandpass Filtering}
+\State $filtered \gets \text{butterworth}(signal,[1.0,2.0],4)$
+\State $filtered \gets \text{normalize}(filtered)$
+
+\Statex \textbf{Peak Detection}
+\State $d_{\min} \gets 30$
+\State $peaks \gets \text{find\_peaks}(filtered,\text{distance}=d_{\min})$
+\If{$|peaks| < 3$}
+    \State \Return NULL
+\EndIf
+
+\Statex \textbf{Heart Rate Calculation}
+\State $intervals \gets \text{diff}(peaks)/f_s$
+\State $valid \gets \text{filter}(intervals,[0.4,1.5])$
+\State $refined \gets \text{remove\_outliers}(valid)$
+\State $HR \gets 60/\text{median}(refined)$
+
+\If{$60 \le HR \le 100$}
+    \State \Return $HR$
+\Else
+    \State \Return NULL
+\EndIf
+\end{algorithmic}
+\end{algorithm}
+
+%========================
+\begin{algorithm}[!t]
+\caption{Oxygen Saturation (SpO$_2$) Calculation}
+\label{alg:SpO$_2$}
+\footnotesize
+\begin{algorithmic}[1]
+\Require IR buffer, RED buffer, sampling rate $f_s = 50$ Hz
+\Ensure SpO$_2$ (\%) or NULL
+
+\Statex \textbf{Data Validation}
+\If{$|\text{ir\_buffer}| < 400$}
+    \State \Return NULL
+\EndIf
+
+\Statex \textbf{Signal Preprocessing}
+\State $ir \gets \text{last}_{400}(\text{ir\_buffer})$
+\State $red \gets \text{last}_{400}(\text{red\_buffer})$
+\State $ir \gets ir - \text{mean}(ir)$
+
+\Statex \textbf{Enhanced Peak Detection}
+\State $filtered \gets \text{butterworth}(ir,[0.7,3.5],3)$
+\State $d \gets |\text{diff}(\text{normalize}(filtered))|$
+\State $enhanced \gets \text{smooth}(d)$
+\State $peaks \gets \text{find\_peaks}(enhanced)$
+
+\Statex \textbf{Beat-by-Beat Analysis}
+\State $S \gets [\;]$
+\For{each beat}
+    \State $AC_{ir} \gets \max(ir)-\min(ir)$
+    \State $DC_{ir} \gets \text{mean}(ir)$
+    \State $AC_{red} \gets \max(red)-\min(red)$
+    \State $DC_{red} \gets \text{mean}(red)$
+    \State $R \gets \dfrac{AC_{red}/DC_{red}}{AC_{ir}/DC_{ir}}$
+    \State $SpO_2 \gets 104 - 17R$
+    \State append $SpO_2$ to $S$
+\EndFor
+
+\State \Return $\text{clip}(\text{mean}(S),70,100)$
+\end{algorithmic}
+\end{algorithm}
+
+%========================
+\begin{algorithm}[!t]
+\caption{Respiratory Rate Estimation from PPG}
+\label{alg:respiratory_rate}
+\footnotesize
+\begin{algorithmic}[1]
+\Require IR buffer, sampling rate $f_s = 50$ Hz
+\Ensure Respiratory rate (6--40 breaths/min) or NULL
+
+\Statex \textbf{Data Validation}
+\State $N_{\text{req}} \gets 50 \times 30$
+\If{$|\text{buffer}| < N_{\text{req}}$}
+    \State \Return NULL
+\EndIf
+
+\Statex \textbf{Signal Preprocessing}
+\State $signal \gets \text{buffer}$
+\State $centered \gets signal - \text{mean}(signal)$
+
+\Statex \textbf{Respiratory Band Filtering}
+\State $filtered \gets \text{butterworth}(centered,[0.1,0.5],4)$
+
+\Statex \textbf{Breathing Cycle Detection}
+\State $d_{\min} \gets 75$
+\State $p \gets 0.3 \times \text{std}(filtered)$
+\State $peaks \gets \text{find\_peaks}(filtered,\text{distance}=d_{\min},\text{prominence}=p)$
+
+\Statex \textbf{Rate Calculation}
+\State $RR \gets \dfrac{|peaks| \times 60}{30}$
+
+\If{$6 \le RR \le 40$}
+    \State \Return $RR$
+\Else
+    \State \Return NULL
+\EndIf
+\end{algorithmic}
+\end{algorithm}
+
+\FloatBarrier
+
+\subsection{Health Anomaly Detection and Risk Categorization}
+
+Operating in the sphere of healthcare services, the specified sub-field concerns itself with the detection of the abnormalities with regard to the human health state and the classification of the corresponding conditions in reference to the extent of damage they cause to the patient. The system is set to identify and categorize different health abnormalities through the deviation of physiological parameters with the normal parameters. Such a holistic solution allows identifying possible health problems early in life and helps to take care of collective health before it is too late.
+
+\subsubsection{Physiological Anomaly Classification and Multi-Parameter Risk Assessment}
+
+These possible anomalies are:
+\begin{itemize}
+\item \textbf{Hypoxemia}: SpO$_2$ < 90\% indicating insufficient oxygen saturation
+\item \textbf{Tachycardia}: Heart rate over 100 BPM indicating high heart activity
+\item \textbf{Bradycardia}: Heart rate less than 60 BPM and reflection of slow heart rate
+\item \textbf{Tachypnea}: Rapid breathing rate, with over 20 breaths/min denoted
+\item \textbf{Bradypnea}: Breathing rate less than 12 breaths/min.
+\end{itemize}
+\vspace{0.5em}
+
+
+
+These states can point to acetyl disorders of the cardiovascular, respiratory, or systemic system that need medical treatment \cite{b21}. It is notable that this multi-parameter risk assessment is used in determining the likelihoods of a specified risk. The machine learning classification system classifies users according to the interaction of physiological parameters, age, and gender into three risk groups as follows:
+
+\begin{enumerate}
+\item \textbf{Healthy}: Normal physiological parameters within acceptable ranges, indicating optimal health status
+\item \textbf{Mild Risk}: Minor deviations from normal ranges requiring monitoring and lifestyle modifications
+\item \textbf{Severe Risk}: Significant parameter deviations requiring immediate medical attention and intervention
+\end{enumerate}
+
+This approach offers three categories of risk stratification that is clinically meaningful and allows the relevant healthcare intervention to be applied depending on the level of severity identified through the PPG monitoring system. The multi-parameter test takes into account the physiological interactions which are not reflected by the single-parameter tests to make the assessment of health more comprehensive..
+
+\subsection{Machine Learning Model Architecture and Training}
+
+\subsubsection{Multilayer Perceptron (MLP) Selection and Justification}
+The reason why a Multilayer Perceptron (MLP) neural network model was selected for health risk classification is that there are a number of important advantages that make it especially suitable for the analysis of physiological parameters. MLP neural networks have a strong ability to learn complex nonlinear relationships between multiple input features, which is an important requirement for health risk classification, where physiological parameters are interrelated in complex ways\cite{b22}. In contrast to linear classifiers, multilayer perceptrons (MLPs) have the capability to learn the nonlinear relationships between age, gender, and vital signs that define different levels of health risks.
+
+The choice of using MLPs over other machine learning methods is justified by several reasons. Interpretability and acceptability in the clinical community are the most important factors, as MLPs offer a good trade-off between model complexity and interpretability, making them more acceptable in the clinical community than other models, such as deep neural networks, which are less interpretable. Computational efficiency allows for real-time processing on resource-limited embedded systems, while robustness to small datasets ensures that MLPs work reasonably well with moderately sized datasets and have lower sensitivity to overfitting than more complex models when properly regularized. The softmax output layer allows for multi-class classification, which is naturally suited for modeling multi-class probability distributions and provides confidence scores for each risk class. Furthermore, the ability of MLPs to combine heterogeneous features, namely continuous physiological measurements and categorical demographic information, using learned weight matrices makes feature fusion easier.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.4\textwidth]{archi2.jpeg}
+\caption{MLP neural network architecture for health risk classification using five input features and three ReLU-activated hidden layers, with a softmax output for Healthy, Mild Risk, and Severe Risk classes.}
+\label{fig:mlp_architecture}
+\end{figure}
+\subsubsection{Network Architecture and Design Rationale}
+The MLP architecture, illustrated in Figure \ref{fig:mlp_architecture}, The model was designed through empirical optimization and clinical needs. It consists of an input layer that takes in five features (respiratory rate, SpO$_2$, heart rate, age, and encoded gender), three hidden layers with 64, 128, and 64 neurons respectively using ReLU activation functions, and an output layer with three neurons using softmax activation functions for three-class risk classification: Healthy, Mild Risk, and Severe Risk.
+
+The input layer handles five carefully chosen features that are the most relevant clinical parameters for risk assessment. Respiratory rate, SpO$_2$, and heart rate are direct physiological measures, and age and gender are significant demographic risk factors that affect normal parameter values and disease susceptibility.
+
+The hidden layers follow a symmetric bottleneck architecture with 64–128–64 neurons, first expanding the feature space to better understand complex interactions and then compressing it to highlight the most significant patterns. The first hidden layer (64 neurons) performs initial feature transformation and interaction analysis. The second hidden layer (128 neurons) is the main feature learning layer, analyzing complex nonlinear relationships between physiological and demographic parameters. The third hidden layer (64 neurons) is a feature compression layer, distilling the learned features into the most significant patterns for classification.
+
+ReLU activation functions were selected for the hidden layers because of their efficiency in computation, alleviation of vanishing gradient problems, and correspondence to the conceptual representation of neural activation patterns. The softmax output layer guarantees that the output probabilities are normalized to sum to one, providing meaningful confidence scores for each risk category.
+\subsubsection{Training Methodology and Optimization}
+Input values for MLP are normalized in the z-score normalization method to ensure that each input feature contributes equally towards training, resulting in stability in the convergence of the network. The training function utilizes the Adam optimizer with an optimal learning rate of 0.001.
+
+The loss function is sparse categorical cross-entropy, which is appropriate where there is multi-class classification, and in such cases, all classes are mutually exclusive. The training data used consists of synthetic physiological parameter combinations, which are created from clinical parameters’ distribution in the MIMIC-III Clinical Database\cite{b36}, The dataset has information regarding vital signs obtained for more than 10,000 ICU patients, including heart rate, respiratory rate, SpO$_2$, age, and gender demographics. The dataset has been labeled following clinical risk assessment guidelines and has been expanded with actual measurement data for each of the participants in the study.
+
+The process of model validation involves 5-fold cross-validation for generalizing and avoiding overfitting issues. Accuracy, precision, recall, and F1 scores are implemented for each category in risk for evaluating balanced performance. The trained model facilitates real-time prediction, with execution times averaging fewer than 10 milliseconds per prediction.
+
+To prevent overfitting, we incorporate regularization techniques such as a dropout rate of 0.3 and early stopping. Based on these techniques, the model exhibits conclusive results in the form of overall accuracy, which is 91.2\%, and precision and recall values for all the risk categories.
+
+
+
+\subsection{Machine Learning Model Mathematical Framework}
+The health risk classification uses a feedforward neural network. The mathematical formulation is as follows. The input vector is defined as:
+
+\[
+\mathbf{x} =
+\begin{bmatrix}
+\text{respiratory rate},\ \text{SpO}_2,\ \text{heart rate},\ \text{age},\ \text{gender}
+\end{bmatrix}^T
+\]
+
+For the $l$-th layer, the hidden activation is computed as:
+\begin{equation}
+\mathbf{h}^{(l)} = \text{ReLU}\left(\mathbf{W}^{(l)}\,\mathbf{h}^{(l-1)} + \mathbf{b}^{(l)}\right)
+\end{equation}
+
+where $\mathbf{W}^{(l)}$ and $\mathbf{b}^{(l)}$ represent the weight matrix and bias vector for layer $l$, respectively.
+
+The softmax function computes class probabilities:
+\begin{equation}
+\hat{y}_j = \frac{\exp(z_j)}{\sum_{k=1}^{K} \exp(z_k)}
+\end{equation}
+
+The predicted health class is determined by:
+\begin{equation}
+y^* = \arg\max_{j} \hat{y}_j
+\end{equation}
+
+The training loss function is defined as sparse categorical cross-entropy:
+\begin{equation}
+\mathcal{L} = -\sum_{j=1}^{K} y_j \log(\hat{y}_j)
+\end{equation}
+
+where $K=3$ represents the number of risk categories (Healthy, Mild Risk, Severe Risk), and $y_j$ is the true class label.
+
+
+\subsection{Study Population and Justification}
+This validation study looked at 100 healthy adult participants aged 18 to 65 years. The mean age was 32.4 ± 12.8, with 52\% male and 48\% female. Participants were recruited from the university community using systematic sampling. The sample size was based on a power analysis for correlation studies. This analysis aimed for 80\% power and a 5\% significance level. This approach ensured enough statistical power to identify clinically meaningful differences with an effect size of 0.3 and α = 0.05.
+
+Participants were selected based on criteria that reflect the diverse ages, genders, as well as varying skin tones in order to assess how well the technology works on different kinds of people. Inclusion criteria included participants aged between 18 and 65 years old, with normal cardiovascular as well as pulmonary function. They should also have stable vital signs as well as informability. On the other hand, the exclusion criteria include those with cardiovascular as well as pulmonary problems, those with medicated heart rate as well as blood pressure, pregnant women, as well as those with finger disorders such as nail polish or artificial nails.
+\section{Results}
+\label{sec:results}
+
+This section shows detailed experimental results and performance analysis of the proposed intelligent health monitoring system. The evaluation is comprised of accuracy of measurement, system strength, real-time performance and clinical validation in a range of testing scenarios.
+
+
+\subsection{System Implementation and Hardware Validation}
+
+The system was tested with 100 healthy participants of different backgrounds to ensure that it works well. Clinical validation was performed by its comparison to FDA-approved reference devices. The acceptable limits were set as follows: SpO$_2$ accuracy of ±2\%, heart rate accuracy of ± BPM and respiratory rate of ±2 breaths/min based on established medical device standards.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.45\textwidth]{setup.png}
+\caption{Hardware implementation showing MAX30102 sensor integrated with ESP32 microcontroller for real-time PPG signal acquisition}
+\label{fig:hardware_setup}
+\end{figure}
+
+Figure \ref{fig:hardware_setup} illustrates the Complete hardware configuration used for PPG signal acquisition. The compact design allows for portable monitoring and keeps clinical-grade signal quality.
+
+\subsection{Real-Time System Interface and Visualization}
+
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.45\textwidth]{respiratory rate.jpeg}
+\caption{Streamlit web interface shows real-time PPG waveforms, extracted physiological parameters, and health status indicators.}
+\label{fig:streamlit_interface}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.45\textwidth]{ai.png}
+\caption{Machine learning health risk assessment dashboard that shows predictive analytics and color-coded risk levels.}
+\label{fig:ai_dashboard}
+\end{figure}
+
+The user interface (Figures \ref{fig:streamlit_interface} and \ref{fig:ai_dashboard}) provides easy to understand, real-time views of physiological data and health assessment features powered with AI.
+
+The system is based on a dual-interface approach for health monitoring. The key Streamlit web interface plays the role of the primary visualization platform. It displays real-time waveforms of the PPG signals, as well as updated physiological parameters such as heart rate, oxygen saturation, and respiratory rate. The interface has built-in dynamic graphical displays with adjustable time windows. This setup allows healthcare professionals to view both immediate readings as well as trends over time for patient vital signs.
+
+The secondary AI-powered dashboard uses MLP Model to provide predictive health risk assessments. This smart interface examines the patterns in the physiological data that is collected and generates color coded risk indicators. This is beneficial for proactive healthcare interventions. The dashboard displays levels of risk in different areas of health from cardiovascular stress, respiratory function and overall physiological stability.
+
+Both interfaces are designed to fit into clinical workflows. They include data formats that can be exported to other systems, customizable alert thresholds, and easy connections to existing hospital information systems. The real-time visualization capability helps quickly detect physiological anomalies, which facilitates quick decision-making in critical care settings.
+
+The architecture of this web-based system provides remote monitoring capabilities, where healthcare providers can access patient data from various locations and ensure the security and compliance of data transmission protocols (HIPAA).
+
+\subsection{Physiological Parameter Accuracy Analysis}
+
+
+The measurement accuracy of the system was precisely tested against the clinically approved reference devices in 100 participants. Comprehensive statistical analysis was conducted to evaluate reliability of the measurement and clinical agreement of the measurement.
+
+\subsubsection{Oxygen Saturation Performance}
+The proposed system showed the outstanding accuracy of SpO$_2$ measurement with a mean absolute error of ±0.25\% relative to the reference pulse oximeter.  Pearson correlation analysis showed that the correlation coefficient was r = 0.995 (p < 0.001) which is a very good linear agreement \cite{b10}. The system was able to keep accuracy in the physiological range of 90-100\% SpO$_2$ and 98.5\% of measurements were within the clinical acceptance criteria of ±2\%.
+
+ Bland-Altman analysis showed mean bias of -0.12\% with 95\% limits of agreement ranging from -1.8\% to +1.6\%, demonstrating excellent clinical agreement according to established medical device validation standards \cite{b12}\cite{b17}.
+
+
+\subsubsection{Heart Rate Measurement Validation}
+Heart rate estimation had a mean absolute error of ±1.2 BPM from the reference device; well below the clinical acceptance limit of ±3 BPM. The correlation coefficient of r = 0.98 (p < 0.001) shows the strong correlation of linear relationship in the tested range of 55-110 BPM. The system was consistent in performance across age groups and activity levels.
+
+Heart rate results indicated an average bias of +0.3 BPM with 95\% limits of agreements from -2.8 to +3.4 BPM, which confirmed excellent clinical agreement.
+
+\subsubsection{Respiratory Rate Estimation Performance}
+Respiratory rate estimation, derived from PPG signal modulations, showed strong correlation with manual reference measurements (r = 0.92, p < 0.001). 
+
+
+\subsection{Statistical Validation and Comparative Analysis}
+
+Comprehensive statistical validation was performed to determine the clinical accuracy and reliability of the proposed system with established medical reference standards. The validation techniques used several statistical approaches such as correlation analysis, Bland-Altman agreement analysis and clinical accuracy analysis for all three physiological parameters.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.4\textwidth]{heartrate.png}
+\caption{Comparison of heart rate (BPM) between the proposed PPG-based device and a reference pulse oximeter across 100 participants.}
+\label{fig:heart_rate_validation}
+\end{figure}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.4\textwidth]{spo2.png}
+\caption{Comparison ofSpO$_2$ between the proposed PPG-based device and a reference pulse oximeter across 100 participants.}
+\label{fig:SpO$_2$_validation}
+\end{figure}
+
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.4\textwidth]{respirate.png}
+\caption{Comparison of respiratory rate (breaths/min) between the proposed PPG-based device and manual reference counts across 100 participants.}
+\label{fig:respiratory_rate_validation}
+\end{figure}
+The validation results presented in Figures \ref{fig:heart_rate_validation}, \ref{fig:SpO$_2$_validation}, and \ref{fig:respiratory_rate_validation} demonstrate that the proposed system provides accurate and reliable measurements for heart rate, oxygen saturation (SpO$_2$), and respiratory rate. Overall, the system meets the accuracy requirements for non-invasive physiological monitoring devices.
+
+\textbf{Heart Rate Validation:} The proposed system was in an excellent agreement with clinical reference measurements. A high Pearson correlation coefficient ($r = 0.98$, $p < 0.001$) represents strong linear agreement. Linear regression analysis provided a close to unity slope with a small intercept, reflecting a small amount of systematic error. The average absolute error was $\pm1.2$ BPM in a range of 55 to 110 BPM. Bland--Altman analysis revealed mean bias +0.3 BPM with narrow limits of agreement, which confirmed stable and accurate performance.
+
+\textbf{Oxygen Saturation (SpO$_2$) Validation:} SpO$_2$ measurements showed a near perfect agreement with reference data with $r=0.995$ ($p<0.001$). The mean absolute error was $\pm0.25\%$. Bland--Altman analysis showed little bias and narrow limits of agreement, indicating high precision and clinical reliability for the system.
+
+\textbf{Respiratory Rate Validation:} Respiratory rate measurements demonstrated strong agreement with manual counts ($r = 0.92$, $p < 0.001$). The mean absolute error of $\pm1.8$ breaths/min falls within accepted clinical limits across the physiological range of 8--22 breaths/min. Bland--Altman analysis showed minimal bias and reasonable limits of agreement, validating reliable performance.
+
+\textbf{Statistical and Clinical Validation:} Paired t-tests revealed no significant differences between system and reference measurements for heart rate, SpO$_2$ or respiratory rate ($p > 0.05$), indicating no systematic bias. Low coefficients of variation and narrow confidence intervals are evidence of stable and repeatable measurements. These results confirm that the clinical grade performance of the system is valid, and it could be used for continuous monitoring, telemedicine and preventive healthcare.
+
+\subsection{Machine Learning Classification Performance}
+
+The health risk classification model achieved 91.2\% overall accuracy across three risk categories. Table \ref{tab:ml_performance} presents the detailed performance metrics including precision, recall, and F1-score for each risk category.
+
+\begin{table}[h]
+\centering
+\caption{Machine Learning Classification Performance Metrics}
+\label{tab:ml_performance}
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Risk Category} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} \\
+\hline
+Healthy & 0.94 & 0.92 & 0.93 \\
+Mild Risk & 0.89 & 0.87 & 0.88 \\
+Severe Risk & 0.88 & 0.90 & 0.89 \\
+\hline
+\textbf{Overall Accuracy} & \multicolumn{3}{c|}{91.2\%} \\
+\hline
+\end{tabular}
+\end{table}
+
+The classification system provides users with interpretable risk assessment, enabling proactive health management and early intervention when necessary.
+
+\subsection{Vital Sign Classification and Clinical Thresholds}
+
+The clinical interpretation of physiological parameters implies the standardization of classification ranges which are compatible with established medical guidelines, and allow to accurately assess the health risk. Our system puts in place evidence-based thresholds for each of the parameters being monitored, which offers clinically meaningful categorization that can support both automated risk assessment and healthcare provider decision-making.
+
+\begin{table}[h]
+\centering
+\caption{Clinical Classification Ranges for Physiological Parameters\cite{b2}\cite{b35}}
+\label{tab:vital_ranges}
+\begin{tabular}{|c|c|c|}
+\hline
+\textbf{Vital Sign} & \textbf{Category} & \textbf{Range} \\
+\hline
+SpO$_2$ (\%) & Normal & 95--100 \\
+       & Mild Hypoxemia & 90--94 \\
+       & Severe Hypoxemia & $<$ 90 \\
+\hline
+Heart Rate (BPM) & Bradycardia & $<$ 60 \\
+       & Normal & 60--100 \\
+       & Tachycardia & $>$ 100 \\
+\hline
+Respiratory Rate & Bradypnea & $<$ 12 \\
+(breaths/min) & Normal & 12--20 \\
+               & Tachypnea & $>$ 20 \\
+\hline
+\end{tabular}
+\end{table}
+
+Table \ref{tab:vital_ranges}
+presents the ranges of clinical classification applied in our health monitoring system, based on known medical standards and clinical practice guidelines. These thresholds are the basis for the health risk assessment and automatic alert generation of our machine learning model.
+
+Oxygen saturation (SpO$_2$) values from 95--100\% are regarded as normal and reflected good tissue oxygenation. SpO$_2$ in a range of 90--94\% would reflect mild hypoxemia and should be a cause for clinical attention especially in patients with underlying cardiopulmonary conditions. Values below 90\% are considered severe hypoxemia and are a critical condition in which medical intervention should be administered immediately.
+
+A normal heart rate for healthy adults is 60--100 BPM while resting. Bradycardia (below 60 BPM) may be due to the effects of athletic conditioning or medications but may also be due to cardiac conduction abnormalities which warrants clinical evaluation if it is not due to an obvious cause. Tachycardia (above 100 BPM) is largely linked to physical stress or fever, dehydration or cardiovascular disorders and should be interpreted in the correct clinical context.
+
+The normal respiratory rate for adults in a resting state is 12--20 breaths/min. Bradypnea (respiratory rate less than 12 breaths/min) may be caused by depression of the central nervous system, metabolic disturbance, or drug effect, whereas tachypnea (respiratory rate greater than 20 breaths/min) may be an early sign of respiratory distress, metabolic acidosis, or systemic infection.
+
+These standardized clinical thresholds are combined with the proposed machine learning model in order to allow for a complete health risk stratification. By analyzing several physiological parameters together with demographic factors like age and gender, the system takes into account interdependencies between vital signs, rather than examining each of them individually. This is a multi-parameter framework that supports both real-time monitoring and longitudinal evaluation of health while ensuring compatibility with established clinical workflows and electronic health record systems.
+
+\subsection{Performance and Real-time Capabilities of the System}
+
+The system has excellent real-time performance and signal processing with a latency time of $1.2 \pm 0.3$ seconds from data acquisition to parameter display. Machine learning inference runs with sub-10 millisecond processing times, allowing for continuous health monitoring with no perceptible delay time.
+
+By power consumption analysis, the full system consumes 18.5 mW average power, which allows 48+ hours of continuous monitoring with an off-the-shelf 1000 mAh battery. The small volume of the hardware design (total dimensions: 45mm $\times$ 30mm $\times$ 15mm) supports portable and wearable deployment scenarios.
+
+
+\subsection{Report Generation \& Documentation}
+The automated system of report generation produces complete health summaries in $3.2 \pm 0.8$ seconds. Reports include timestamped measurements, statistical analysis, trend visualizations, color-coded risk assessments and personalized health recommendations. The reports support the clinical documentation requirements and provide a communication between patients and healthcare providers.
+
+\subsection{Summary of Clinical Validation}
+The thorough validation study shows that the proposed system satisfies clinical requirements to be accurate for non-invasive physiological monitoring. The combination of several parameters (SpO$_2$, heart rate, respiratory rate) with intelligent health evaluation has great advantages over traditional one-parameter monitoring devices. The portability, real-time and user-friendly interface of the system make it ideal for various healthcare applications like home monitor, telemedicine, and preventive healthcare programs.
+
+
+
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Methodological Innovations and Technical Contributions}
+
+The approach proposed here represents a series of methodological innovations that will bring the state-of-the-art in non-invasive physiological monitoring a step further. The integration of respiratory rate estimation from PPG signals is a great technical contribution, because traditional pulse oximeters are only able to measure SpO$_2$ and heart rate. The envelope detection method based on the Hilbert transform is a computationally efficient method for extracting respiratory modulations from PPG signals that shows a strong correlation ($r = 0.92$) with manual reference measurements while still being able to perform real-time processing.
+
+The adaptive peak detection algorithm with dynamic thresholding overcomes a key problem of PPG-based heart rate estimation by automatically adapting to physiological fluctuations with respect to inter-individual differences and signal quality variations. This method has shown an excellent robustness in comparison with fixed threshold methods in difficult measurement situations. The ratio of ratios calibration optimization for SpO$_2$ measurement with the empirical constants ($A = 104 \pm 2$, $B = 17 \pm 1$) leads to  ($\pm 0.25\%$) accuracy.
+
+The integration of machine learning is a paradigm shift from a passive measurement to intelligent health assessment. The MLP architecture encoder-decoder architecture (64-128-64 neurons) is effective for capturing the complex physiological interactions and is computationally efficient enough for embedded systems. The multi-parameter risk stratification approach overcomes a key shortcoming of current risk monitoring systems in that it allows clinical interpretation of the risk besides the raw measurements.
+
+
+\subsection{Clinical Translation and Healthcare Impact}
+
+The clinical significance of this work is beyond the technical achievements to critically important problems in healthcare delivery. The potential of the system to enable thorough evaluating of vital signs with a single low-cost sensor has wide-ranging implications for accessibility of healthcare, especially in resource-limited environments where conventional multi-parameter monitoring is impractical. Real-time processing capability (1.2-second latency) allows immediate clinical decision-making, whereas automatic health risk classification (91.2\% precision) informs early intervention strategies.
+
+Integration of respiratory rate monitoring fills an important void in portable health monitoring because respiratory rate tends to be the first vital sign to fail during health crises. This ability is of particular value in the case of monitoring of the coronavirus pandemic, chronic obstructive pulmonary disease application, and post-operative care where respiratory problems are of the foremost concern. The continuous nature of monitoring of this system allows physiological changes that may not be monitored during the intermittent clinical assessment to be detected.
+
+The low power consumption (18.5 mW) and small form factor allows for longer monitoring times without the burden on the user and helps overcome compliance issues typical in home healthcare applications. The web-based interface provides platform independence and allows remote monitoring capabilities necessary for telemedicine applications; of particular interest in the post-pandemic healthcare environment.
+
+
+
+\section{Conclusion}
+\label{sec:conclusion}
+This paper presents an intelligent health monitoring system that addresses critical limitations of current portable physiological monitoring devices through integrated PPG-based sensing and machine learning-driven risk assessment. The system achieved measurement accuracy of $\pm 0.25\%$ for oxygen saturation, $\pm 1.2$ BPM for heart rate, and demonstrated strong correlation ($r = 0.92$) for respiratory rate estimation compared to reference standards. The health risk stratification module demonstrated 91.2\% classification accuracy, meeting and surpassing clinical benchmarks required for non-invasive monitoring equipment.
+
+The system's novelty lies in three key contributions. First, it derives respiratory rate directly from PPG signals using adaptive filtering and spectral analysis techniques, addressing a historically challenging measurement problem. Second, adaptive signal processing algorithms enable robust parameter extraction across varying physiological states and environmental conditions. Third, the integration of machine learning transforms the system from passive data collection to active healthcare management, enabling real-time risk assessment with minimal computational overhead.
+
+Clinical validation with 100 subjects demonstrated the system's reliability through comprehensive statistical analysis. Pearson correlation analysis showed excellent linear agreement ($r = 0.995$, $p < 0.001$), while Bland-Altman analysis revealed minimal bias ($-0.12\%$) with narrow 95\% limits of agreement ($-1.8\%$ to $+1.6\%$). The system performed consistently across different demographic groups, demonstrating both clinical-grade precision and broad applicability.
+
+The system addresses practical healthcare delivery challenges, particularly in resource-constrained environments where comprehensive monitoring is needed but conventional systems are cost-prohibitive or impractical. By combining multiple physiological parameters with intelligent risk assessment, the system enables early disease detection, improved chronic disease management, and enhanced preventative care strategies.
+
+Several limitations warrant acknowledgment. Motion artifact susceptibility remains challenging during ambulatory monitoring, though implemented quality assessment algorithms mitigate this by rejecting unreliable measurements. Proper sensor contact requires user education and may limit applicability in patients with impaired manual dexterity. The machine learning model, trained primarily on healthy adult populations, requires validation across diverse pathological conditions to ensure clinical generalizability. The current three-category risk classification may need expansion for more granular health assessment in specific clinical applications.
+
+Future work should focus on three directions: integration with electronic health record systems for seamless clinical workflows, multisensor fusion to enhance measurement robustness, and personalized calibration algorithms to improve individual accuracy. Advanced deep learning architectures and edge computing implementations could further enhance autonomous risk assessment capabilities. The modular architecture and validated performance provide a robust foundation for advancing intelligent health monitoring technology toward proactive healthcare management.
+
+
+\begin{thebibliography}{00}
+
+\bibitem{b1} World Health Organization, ``Cardiovascular diseases (CVDs),'' WHO Fact Sheet, 2021. [Online]. Available: https://www.who.int/news-room/fact-sheets/detail/cardiovascular-diseases-(cvds)
+
+\bibitem{b2} American Heart Association, ``Statistical fact sheet: 2013 update,'' Circulation, vol. 127, pp. e6--e245, 2013.
+
+\bibitem{b3} M. Jayawardhana and P. de Chazal, ``Enhanced detection of sleep apnoea using heart-rate, respiration effort and oxygen saturation derived from a photoplethysmography sensor,'' in \emph{Proc. IEEE Eng. Med. Biol. Soc. (EMBS)}, 2017, pp. 121--124.
+
+\bibitem{b4} Grand View Research, ``Wearable medical devices market size, share \& trends analysis report,'' Market Research Report, 2023.
+
+\bibitem{b5} M. Pittara, T. Theocharides, and C. Orphanidou, ``Estimation of pulse rate from ambulatory PPG using ensemble empirical mode decomposition and adaptive thresholding,'' in \emph{Proc. IEEE Eng. Med. Biol. Soc. (EMBS)}, 2017, pp. 2916--2919.
+
+\bibitem{b6} R. Mukherjee, S. Ghosh, B. Gupta, and T. Chakravarty, ``Reflective PPG-based noninvasive continuous pulse rate measurement and remote monitoring system,'' in \emph{Proc. IEEE Int. Conf. Adv. Comput., Commun. Informatics (ICACCI)}, 2017, pp. 1098--1103.
+
+\bibitem{b7} A. Reisner, P. A. Shaltis, D. McCombie, and H. H. Asada, ``Utility of the photoplethysmogram in circulatory monitoring,'' \emph{Anesthesiology}, vol. 108, no. 5, pp. 950--958, 2008.
+
+\bibitem{b8} J. Allen, ``Photoplethysmography and its application in clinical physiological measurement,'' \emph{Physiol. Meas.}, vol. 28, no. 3, pp. R1--R39, 2007.
+
+\bibitem{b9} G. Ma, T. Tong, W. Zhu, J. Zhang, J. Zhong, and L. Wang, ``Wearable ear blood oxygen saturation and pulse measurement system based on PPG,'' in \emph{Proc. IEEE SmartWorld, UIC, ATC, ScalCom, CBDCom, IoP, SmartCity}, 2018, pp. 111--118.
+
+\bibitem{b10} M. Krizea, J. Gialelis, A. Kladas, G. Theodorou, G. Protopsaltis, and S. Koubias, ``Accurate detection of heart rate and blood oxygen saturation in reflective photoplethysmography,'' in \emph{Proc. IEEE Int. Symp. Signal Process. Inf. Technol. (ISSPIT)}, 2020, pp. 1--6.
+
+\bibitem{b11} M. A. Motin, C. K. Karmakar, D. K. Kumar, and M. Palaniswami, ``PPG derived respiratory rate estimation in daily living conditions,'' in \emph{Proc. IEEE Eng. Med. Biol. Soc. (EMBS)}, 2020, pp. 2736--2739.
+
+\bibitem{b12} W. Wu, F.-N. Stapelfeldt, S. Kroker, H. S. Wasisto, and A. Waag, ``A compact calibratable pulse oximeter based on color filters: Towards a quantitative analysis of measurement uncertainty,'' \emph{IEEE Sensors Journal}, vol. 21, no. 6, pp. 7522--7531, Mar. 2021, doi: 10.1109/JSEN.2020.3048118.
+
+\bibitem{b13} S. Singh, M. Koz{\l}owski, I. Garc{\'\i}a-L{\'o}pez, Z. Jiang, and E. Rodriguez-Villegas, ``Proof of concept of a novel neck-situated wearable PPG system for continuous physiological monitoring,'' \emph{IEEE Transactions on Instrumentation and Measurement}, vol. 70, pp. 1--13, 2021, Art. no. 9509609, doi: 10.1109/TIM.2021.3083415.
+
+\bibitem{b14} D. Bian, P. Mehta, and N. Selvaraj, ``Respiratory rate estimation using PPG: A deep learning approach,'' in \emph{Proc. IEEE Int. Conf. Biomed. Health Informatics (BHI)}, 2020, pp. 5948--5952.
+
+\bibitem{b15} M. Suleman, K. Motaman, Y. Hasanpoor, M. Ghamari, K. Alipour, and M. Zadeh, ``Respiratory events estimation from PPG signals using a simple peak detection algorithm,'' in \emph{Proc. 29th National and 7th Int. Iranian Conf. Biomed. Eng. (ICBME)}, 2022, pp. 119--123, doi: 10.1109/ICBME57741.2022.10052943.
+
+\bibitem{b16} L. Zhao, F. Zhang, H. Zhang, Y. Liang, A. Zhou, and H. Ma, ``Robust respiratory rate monitoring using smartwatch photoplethysmography,'' \emph{IEEE Internet Things J.}, vol. 10, no. 6, pp. 4830--4845, Mar. 2023, doi: 10.1109/JIOT.2022.3219813.
+
+\bibitem{b17} D. Berwal, A. Kuruba, A. M. Shaikh, A. Udupa, and M. S. Baghini, ``SpO$_2$ measurement: Non-idealities and ways to improve estimation accuracy in wearable pulse oximeters,'' \emph{IEEE Sensors J.}, vol. 22, no. 12, pp. 11653--11665, Jun. 2022, doi: 10.1109/JSEN.2022.3170069.
+
+\bibitem{b18} M. D. Pel\'{a}ez-Coca, A. Hernando, J. L\'{a}zaro, and E. Gil, ``Impact of the PPG sampling rate in the pulse rate variability indices evaluating several fiducial points in different pulse waveforms,'' \emph{IEEE J. Biomed. Health Inform.}, vol. 26, no. 2, pp. 539--551, Feb. 2022, doi: 10.1109/JBHI.2021.3099208.
+
+\bibitem{b19} C.-Y. Guo, W.-Y. Huang, H.-C. Chang, and T.-L. Hsieh, ``Calibrating oxygen saturation measurements for different skin colors using the individual typology angle,'' \emph{IEEE Sensors J.}, vol. 23, no. 15, pp. 16993--17001, Aug. 2023, doi: 10.1109/JSEN.2023.3288151.
+
+\bibitem{b20} C. Nwibor, S. Haxha, M. M. Ali, M. Sakel, A. R. Haxha, K. Saunders, and S. Nabakooza, ``Remote health monitoring system for the estimation of blood pressure, heart rate, and blood oxygen saturation level,'' \emph{IEEE Sensors J.}, vol. 23, no. 5, pp. 5401--5412, Mar. 2023, doi: 10.1109/JSEN.2023.3235977.
+
+\bibitem{b21} P. Osathitporn, G. Sawadwuthikul, P. Thuwajit, K. Ueafuea, T. Mateepithaktham, N. Kunaseth, T. Choksatchawathi, P. Punyabukkana, E. Mignot, and T. Wilaiprasitporn, ``RRWaveNet: A compact end-to-end multiscale residual CNN for robust PPG respiratory rate estimation,'' \emph{IEEE Internet Things J.}, vol. 10, no. 18, pp. 15943--15958, Sep. 2023, doi: 10.1109/JIOT.2023.3265980.
+
+\bibitem{b22} L. Wang, C. Zhao, L. Huang, and P. T. Mathiopoulos, ``Photoplethysmography-based heart action monitoring using a growing multilayer network,'' \emph{IEEE Sensors J.}, vol. 23, no. 4, pp. 3756--3768, Feb. 2023, doi: 10.1109/JSEN.2022.3228517.
+
+\bibitem{b23} Z. Ebrahimi and B. Gosselin, ``Ultralow-power photoplethysmography (PPG) sensors: A methodological review,'' \emph{IEEE Sensors J.}, vol. 23, no. 15, pp. 16467--16480, Aug. 2023, doi: 10.1109/JSEN.2023.3284818.
+
+\bibitem{b24} N. Chettri, A. Aprile, E. Bonizzoni, and P. Malcovati, ``Advances in PPG sensors data acquisition with light-to-digital converters: A review,'' \emph{IEEE Sensors J.}, vol. 24, no. 16, pp. 25261--25275, Aug. 2024, doi: 10.1109/JSEN.2024.3420170.
+
+\bibitem{b25} M. T. B. Bonifacio, J. M. B. De Austria, and R. G. Garcia, ``IoT medical device with digital signal processing for photoplethysmography-derived respiratory rate,'' in \emph{Proc. IEEE 4th Int. Conf. Electron. Commun., Internet Things Big Data (ICEIB)}, 2024, pp. 741--745, doi: 10.1109/ICEIB61477.2024.10602609.
+
+\bibitem{b26} C. Zhang, H. Yan, Q. Liu, K. Yang, F. Liu, and L. Lin, ``Design and analysis of a through-body signal transmission system based on human oxygen saturation detection,'' \emph{IEEE Trans. Mol., Biol. Multi-Scale Commun.}, vol. 10, no. 1, pp. 122--131, Mar. 2024, doi: 10.1109/TMBMC.2023.3349326.
+
+\bibitem{b27} W. Wang and L. Najafizadeh, ``Ultra-short term heart rate variability estimation using PPG and end-to-end deep learning,'' in \emph{Proc. 58th Asilomar Conf. Signals, Syst., Comput.}, 2024, pp. 962--966, doi: 10.1109/IEEECONF60004.2024.10943067.
+
+\bibitem{b28} W. Shi, L. Dong, J. Cheng, Y. Mu, C. Yue, M. Hu, Y. Zhong, Y. Gao, C. Liu, X. Wang, J. Yu, D. Yao, and W. Yang, ``Non-invasive blood pressure monitoring using a single-channel PPG sensor with adaptive Kalman algorithm and 4-LED arrayed structure,'' \emph{IEEE Trans. Instrum. Meas.}, vol. 73, Art. no. 9520414, 2024, doi: 10.1109/TIM.2024.3480192.
+
+\bibitem{b29} S. Majumder, A. K. Roy, T. Mondal, and M. J. Deen, ``Flexible sensors for IoT-based health monitoring,'' \emph{IEEE J. Flexible Electron.}, vol. 4, no. 2, pp. 63--88, Feb. 2025, doi: 10.1109/JFLEX.2025.3538808.
+
+\bibitem{b30} D. Yang, J. Zhu, and P. Zhu, ``SpO$_2$ and heart rate measurement with wearable watch based on PPG,'' in \emph{Proc. IEEE Int. Conf. Electron. Inf. Eng.}, pp. 1--5, 2016.
+
+\bibitem{b31} E. Perpetuini, D. Cardone, and A. Merla, ``Photoplethysmographic prediction of the ankle-brachial pressure index through a machine learning approach,'' \emph{IEEE J. Biomed. Health Inform.}, vol. 25, no. 7, pp. 2734--2744, Jul. 2021.
+
+\bibitem{b32} K. Budidha and P. A. Kyriacou, ``The human ear canal: Investigation of its suitability for monitoring photoplethysmographs and arterial oxygen saturation,'' \emph{Physiol. Meas.}, vol. 35, no. 2, pp. 111--128, 2014.
+
+\bibitem{b33} M. Elgendi, ``On the analysis of fingertip photoplethysmogram signals,'' \emph{Curr. Cardiol. Rev.}, vol. 8, no. 1, pp. 14--25, 2012.
+
+\bibitem{b34} Y. Maeda, M. Sekine, and T. Tamura, ``Relationship between measurement site and motion artifacts in wearable reflected photoplethysmography,'' \emph{J. Med. Syst.}, vol. 35, no. 5, pp. 969--976, 2011.
+
+\bibitem{b35} F. Shaffer and J. P. Ginsberg, ``An overview of heart rate variability metrics and norms,'' \emph{Front. Public Health}, vol. 5, Art. no. 258, 2017.
+
+\bibitem{b36} A. E. W. Johnson, T. J. Pollard, L. Shen, L. H. Lehman, M. Feng, M. Ghassemi, B. Moody, P. Szolovits, L. A. Celi, and R. G. Mark, ``MIMIC-III, a freely accessible critical care database,'' \emph{Scientific Data}, vol. 3, no. 1, Art. no. 160035, 2016.
+
+\bibitem{b37} F. Elsamnah, A. Bilgaiyan, M. Affiq, C.-H. Shim, H. Ishidai, and R. Hattori, “Reflectance-Based Organic Pulse Meter Sensor for Wireless Monitoring of Photoplethysmogram Signal,” Biosensors, vol. 9, no. 3, Art. no. 87, Jul. 2019, doi: 10.3390/bios9030087.
+
+
+\end{thebibliography}
+\vspace{5em}
+
+
+\begin{IEEEbiography}[{\includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{profile1.jpeg}}]{Manan Joshi}
+is currently pursuing a degree in Computer Science (Data Science), with a strong academic and practical focus on data science, artificial intelligence, and machine learning. His interests span across large language models (LLMs), agentic AI systems, and generative AI, where he enjoys building intelligent, autonomous, and data-driven solutions.Proficient in programming and analytical problem-solving, he has hands-on experience working with AI/ML pipelines, data analysis, and modern AI frameworks. Manan is particularly passionate about applying agentic and generative AI to real-world problems, combining theoretical knowledge with practical implementation to create impactful and scalable systems.
+\end{IEEEbiography}
+
+\begin{IEEEbiography}[{\includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{profile2.png}}]{Prabal Kumar Shukla}
+ is an undergraduate student in the Department of Computer Science and Engineering at RV College of Engineering, Bengaluru, India. His academic interests include machine learning, data analysis, and cloud computing. He has a strong inclination toward applying computational techniques to solve real-world problems and is continuously exploring emerging technologies in software and intelligent systems.
+
+\end{IEEEbiography}
+
+\begin{IEEEbiography}[{\includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{profile3.jpeg}}]{Yogesh R. Sindagi}
+is currently pursuing B.E. in Computer Science and Engineering (Data Science) at R.V. College of Engineering. He has a strong interest in Artificial Intelligence, Machine Learning, Cloud Computing and emerging technologies, and is passionate about applying data-driven approaches to solve real-world problems.
+
+\end{IEEEbiography}
+
+
+\begin{IEEEbiography}[{\includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{profile4.png}}]{NITYA N. KULKARNI}
+received a B. E. degree in the dept. of computer science and engineering from S. D. M. College of Engineering & Technology, Dharwad, Karnataka, India in 2013 and M. Tech in the dept. of computer science from B.V.B College of Engineering & Technology, Hubli, Karnataka, India in 2015. She is currently pursuing full time Ph.D. in the dept. of Computer Science and under the Center for Healthcare Technologies Research (CHTR) from RV College of Engineering, Bangalore, Karnataka, India under Visvesvaraya Technological University from 2023. She has worked as an Assistant Professor in B.V.B College of Engineering & Technology in the dept. of Computer Science from the year 2015 to 2017 and in B. M. S. College of Engineering, Bangalore, Karnataka, India from year 2018 to 2019. She has published 07 papers in IEEE International Conferences and 01 paper in Q2 journal. Her areas of interest are Deep Learning and Biomedical Engineering. 
+
+
+\end{IEEEbiography}
+
+\begin{IEEEbiography}[{\includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{profile5.jpg}}]{Mohana}
+working as Associate Professor with over 18 years of academic experience in the Department of Computer science and Engineering at RV College of Engineering, Bangalore. His areas of expertise include Deep Learning, AI, Quantum Computing, Computer Vision, and Image Processing. Dr. Mohana has an impressive academic record, having taught a wide range of undergraduate and postgraduate courses, guided numerous student projects, and published 130 + Research papers in international journals and conferences. His research contributions are reflected in his high citation metrics, including an h-index of 26 on Scopus and 27 on Google Scholar, with his work cited in numerous patents. Dr. Mohana has amassed a remarkable array of awards and recognitions throughout his career, underscoring his pioneering contributions across various domains. Highlights include, Listed ELSEVIER - Stanford Top 2\% Scientists List in the world (2025 and 2024), Winner of Unisys Innovation Program (UIP-16), 2025. Dr. Mohana's guidance has been instrumental in guiding students to success in various National level hackathons and project competitions, securing Best paper awards in various national and IEEE sponsored International conferences. He has been involved in fostering industry-academia collaboration and promoting research-driven education and collaborated with various Industry (Unisys India Pvt Ltd, Dell, NVIDIA, Wipro GE Healthcare, Qualitas Technologies, SLN Innovate Technologies) for impactful academic and research initiatives. He is a distinguished member of IEEE and holds lifetime memberships in Advanced Computing and Communications Society (ACCS), ISTE, and IAENG (Society of Artificial Intelligence) to advance education and research in collaboration with global peers and industry leaders.
+
+\end{IEEEbiography}
+
+\begin{IEEEbiography}[{\includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{profile6.jpeg}}]{B.G. Sudarshan}
+is a distinguished academician and researcher affiliated with RV College of Engineering (RVCE), Bangalore. With a strong background in engineering, he has contributed significantly to both teaching and research, particularly in areas like Computer Science, Artificial Intelligence, or Data Science (specific focus areas may vary based on his profile). His academic journey includes advanced degrees and a commitment to fostering innovation through student mentorship, curriculum development, and interdisciplinary research projects. Dr. Sudarshan’s work aligns with RVCE’s mission to bridge theoretical knowledge with real-world applications, making him a key figure in the institution’s academic ecosystem.As an educator, Dr. Sudarshan has played a pivotal role in shaping courses and guiding students in cutting-edge technologies. His research publications in reputed journals and conferences reflect his expertise in emerging fields, often addressing challenges in machine learning, cybersecurity, or software systems (subject to his specialization). Beyond the classroom, he actively collaborates with industry partners to enhance student exposure to practical problem-solving, ensuring graduates are industry-ready. His leadership in academic committees, accreditation processes (like NBA/NAAC), and research initiatives underscores his dedication to institutional growth.
+Dr. Sudarshan’s contributions extend to administrative roles, where he has been involved in strategic planning, faculty development, and fostering industry-academia linkages. Recognized for his scholarly impact, he may also serve as a reviewer for journals or conferences, further amplifying RVCE’s research reputation. His profile highlights a blend of teaching excellence, research rigor, and organizational leadership, making him an integral part of RVCE’s mission to advance engineering education in India. For precise details, refer to his official RVCE profile or publications.
+
+\end{IEEEbiography}
+
+\end{document}
